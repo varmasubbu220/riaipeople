@@ -5,25 +5,34 @@ from app.utils.auth import create_access_token, create_refresh_token, verify_pas
 from app.utils.database import get_db
 from app.models.usermodel import User
 from fastapi.responses import JSONResponse
+import anyio
+from app.utils.email import send_email
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-
-@router.post("/login")
+@router.post("/login", status_code=status.HTTP_200_OK)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
     
     if not user or not verify_password(form_data.password, user.password):
-        return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Invalid credentials"})
-    
+        return JSONResponse(status_code=201, content={"success": False, "auth": 0, "message": "Invalid credentials"})
+
     if not user.is_verified:
-        return JSONResponse(status_code=status.HTTP_403_FORBIDDEN, content={"detail": "User is not verified"})
+       
+        return JSONResponse(status_code=201, content={"success": False, "auth": 1, "message": "User is not verified"})
 
     access_token = create_access_token({"sub": user.email})
     refresh_token = create_refresh_token({"sub": user.email})
 
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    return {
+        "success": True,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
+
+
 
 @router.get("/validate")
 def validate_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):

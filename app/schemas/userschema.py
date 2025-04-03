@@ -2,9 +2,9 @@ from pydantic import BaseModel, EmailStr
 from datetime import date
 
 class UserCreate(BaseModel):
-    emp_id: int  # Required Employee ID (Foreign Key)
-    department_id: int | None = None
-    role_id: int | None = None
+    # emp_id: int  # Required Employee ID (Foreign Key)
+    # department_id: int | None = None
+    # role_id: int | None = None
 
 
     first_name: str
