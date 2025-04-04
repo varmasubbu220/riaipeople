@@ -4,10 +4,13 @@ from app.models.usermodel import User
 from app.models.onboardusermodel import OnboardUser
 from app.schemas.userschema import UserCreate, UserResponse, UserUpdate
 from app.utils.database import get_db
-from app.utils.auth import hash_password
+from app.utils.auth import hash_password,generate_verification_token,SECRET_KEY,ALGORITHM
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
-
+import anyio
+import random
+import jwt
+from app.utils.email import send_email
 router = APIRouter(prefix="/users", tags=["Users"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -15,20 +18,70 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     try:
-        db_user = db.query(User).filter(User.email == user.email).first()
         onboarded_user = db.query(OnboardUser).filter(OnboardUser.email == user.email).first()
         if not onboarded_user:
             return JSONResponse(
-                status_code=400,
+                status_code=201,
                 content={"success": False, "message": "User not onboarded"},
             )
-       
-        if db_user:
-            return JSONResponse(
-                status_code=201,
-                content={"success": False, "message": "Email already registered"},
-            )
 
+        db_user = db.query(User).filter(User.email == user.email).first()
+
+        if db_user:
+            if db_user.is_verified:
+                return JSONResponse(
+                    status_code=201,
+                    content={"success": False, "message": "Email already registered, try login"},
+                )
+            else:
+                # Update existing user's details
+                db_user.first_name = user.first_name
+                db_user.last_name = user.last_name
+                db_user.dob = user.dob
+                db_user.notes = user.notes
+                db_user.password = hash_password(user.password)  # Update password
+                db_user.department_id = onboarded_user.department_id
+                db_user.role_id = onboarded_user.role_id
+
+                db.commit()
+                db.refresh(db_user)
+
+                # Resend verification email
+                token = generate_verification_token(user.email)
+                verification_link = f"https://yourdomain.com/verify?token={token}"
+                anyio.from_thread.run(
+                    send_email,
+                    user.email,
+                    "✅ RIAI Solution – Verify Your Email",
+                    f"Click the link below to verify your email and complete signup:\n\n{verification_link}",
+                    f"""
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <h2 style="color: #2C3E50;">✅ Verify Your Email</h2>
+    <p>Dear User,</p>
+    <p>Welcome to <b>RIAI Solution</b>! Please verify your email by clicking the link below:</p>
+
+    <p style="text-align: center;">
+      <a href="{verification_link}" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a>
+    </p>
+
+    <p>If you didn’t request this, please ignore this email.</p>
+
+    <p>Best Regards,</p>
+    <p><b>RIAI Solution Team</b></p>
+
+    <hr>
+    <p style="font-size: 12px; color: #7F8C8D;">This is an automated message. Please do not reply to this email.</p>
+  </body>
+</html>
+                    """
+                )
+                return JSONResponse(
+                    status_code=201,
+                    content={"success": True, "message": " Verification email sent"},
+                )
+
+        # Create a new user if not found
         hashed_pwd = hash_password(user.password)
         new_user = User(
             emp_id=onboarded_user.emp_id,
@@ -39,20 +92,50 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
             notes=user.notes,
             password=hashed_pwd,
             department_id=onboarded_user.department_id,
-            role_id=onboarded_user.role_id,        
+            role_id=onboarded_user.role_id,
         )
 
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
 
+        # Send verification email
+        token = generate_verification_token(user.email)
+        verification_link = f"https://yourdomain.com/verify?token={token}"
+        anyio.from_thread.run(
+            send_email,
+            user.email,
+            "✅ RIAI Solution – Verify Your Email",
+            f"Click the link below to verify your email and complete signup:\n\n{verification_link}",
+            f"""
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <h2 style="color: #2C3E50;">✅ Verify Your Email</h2>
+    <p>Dear User,</p>
+    <p>Welcome to <b>RIAI Solution</b>! Please verify your email by clicking the link below:</p>
+
+    <p style="text-align: center;">
+      <a href="{verification_link}" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a>
+    </p>
+
+    <p>If you didn’t request this, please ignore this email.</p>
+
+    <p>Best Regards,</p>
+    <p><b>RIAI Solution Team</b></p>
+
+    <hr>
+    <p style="font-size: 12px; color: #7F8C8D;">This is an automated message. Please do not reply to this email.</p>
+  </body>
+</html>
+                    """
+        )
+
         return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
+            status_code=200,
             content={
                 "success": True,
-                "message": "User created successfully",
+                "message": "User created successfully. Verification email sent.",
                 "data": {
-                   
                     "emp_id": new_user.emp_id,
                     "first_name": new_user.first_name,
                     "last_name": new_user.last_name,
@@ -70,6 +153,38 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"success": False, "message": "Internal server error", "error": str(e)},
         )
+
+
+@router.get("/verify")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload["email"]
+
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+              return JSONResponse(status_code=201,content={"success": False, "message":"Invalid token or user not found"},)
+
+        if user.is_verified:
+            return JSONResponse(
+                status_code=200,
+                content={"success": True, "message": "Email already verified"},
+            )
+
+        user.is_verified = True
+        db.commit()
+
+        return JSONResponse(
+            status_code=200,
+            content={"success": True, "message": "Email verified successfully"},
+        )
+
+    except jwt.ExpiredSignatureError:
+        return JSONResponse(status_code=201,content={"success": False, "message":"Verification link expired"},)
+ 
+
+    except jwt.InvalidTokenError:
+        return JSONResponse(status_code=201,content={"success": False, "message":"Invalidtoken"},)
 
 # Get all users (excluding soft deleted)
 @router.get("/", response_model=list[UserResponse])
@@ -108,3 +223,25 @@ def delete_user(user_id: int, db: Session = Depends(get_db), token: str = Depend
     user.is_deleted = True
     db.commit()
     return {"message": "User deleted successfully"}
+@router.get("/config", response_model=UserResponse)
+def get_user_config(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        # Decode the JWT token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("email")
+
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token: email missing")
+
+        user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

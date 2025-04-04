@@ -11,15 +11,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         # Allow unauthenticated routes
-        public_routes = ["/auth/login", "/auth/refresh",'/onboardusers/','/users/','/docs','/favicon.ico','/'
+        public_routes = ["/auth/login", "/auth/refresh",'/onboardusers/','/users/','/docs','/favicon.ico','/','/users/verify'
                          ,"/data/departments",'/data/roles']
         print(request.url.path,'requesturl')
         if request.url.path in public_routes:
             return await call_next(request)
 
         # Get Authorization header
-      
+
         auth_header = request.headers.get("Authorization")
+        print(auth_header,'authgggggggggggggggggggggg')
         if not auth_header or not auth_header.startswith("Bearer "):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -28,6 +29,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Extract token
         token = auth_header.split(" ")[1]
+       
         payload = verify_token(token)
 
         if not payload:

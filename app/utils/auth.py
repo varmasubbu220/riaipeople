@@ -40,3 +40,6 @@ def verify_token(token: str):
         return payload
     except JWTError:
         return None
+def generate_verification_token(email: str):
+    expiration = datetime.utcnow() + timedelta(hours=24)  # 24-hour validity
+    return jwt.encode({"email": email, "exp": expiration}, SECRET_KEY, algorithm=ALGORITHM)
