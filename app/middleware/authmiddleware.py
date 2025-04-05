@@ -20,7 +20,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Get Authorization header
 
         auth_header = request.headers.get("Authorization")
-        print(auth_header,'authgggggggggggggggggggggg')
+    
         if not auth_header or not auth_header.startswith("Bearer "):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
