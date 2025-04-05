@@ -4,7 +4,7 @@ from app.models.usermodel import User
 from app.models.onboardusermodel import OnboardUser
 from app.schemas.userschema import UserCreate, UserResponse, UserUpdate
 from app.utils.database import get_db
-from app.utils.auth import hash_password,generate_verification_token,SECRET_KEY,ALGORITHM
+from app.utils.auth import hash_password,generate_verification_token,SECRET_KEY,ALGORITHM,create_access_token,create_refresh_token
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 import anyio
@@ -173,10 +173,12 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 
         user.is_verified = True
         db.commit()
-
+        
+        access_token = create_access_token({"sub": user.email})
+        refresh_token = create_refresh_token({"sub": user.email})
         return JSONResponse(
             status_code=200,
-            content={"success": True, "message": "Email verified successfully"},
+            content={"success": True,"access_token":access_token,"refresh_token":refresh_token, "message": "Email verified successfully"},
         )
 
     except jwt.ExpiredSignatureError:

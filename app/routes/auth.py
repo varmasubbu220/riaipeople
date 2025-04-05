@@ -5,6 +5,7 @@ from app.utils.auth import create_access_token, create_refresh_token, verify_pas
 from app.utils.database import get_db
 from app.models.usermodel import User
 from fastapi.responses import JSONResponse
+from app.schemas.userschema import LoginSchema
 import anyio
 from app.utils.email import send_email
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -12,14 +13,13 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == form_data.username).first()
+def login(payload: LoginSchema, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
     
-    if not user or not verify_password(form_data.password, user.password):
+    if not user or not verify_password(payload.password, user.password):
         return JSONResponse(status_code=201, content={"success": False, "auth": 0, "message": "Invalid credentials"})
 
     if not user.is_verified:
-       
         return JSONResponse(status_code=201, content={"success": False, "auth": 1, "message": "User is not verified"})
 
     access_token = create_access_token({"sub": user.email})

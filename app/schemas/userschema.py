@@ -45,3 +45,7 @@ class UserUpdate(BaseModel):
     phone: str | None = None
     notes: str | None = None
     password: str | None = None
+
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str
