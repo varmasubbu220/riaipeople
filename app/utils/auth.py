@@ -23,15 +23,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "email": data.get("sub")})  # Add email separately
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def create_refresh_token(data: dict):
-    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode = data.copy()
-    to_encode.update({"exp": expire})
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "email": data.get("sub")})  # Add email separately
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 
 def verify_token(token: str):

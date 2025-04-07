@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
 
     first_name: str
     last_name: str
-    dob: date
+    # dob: date
     email: EmailStr
  
     notes: str | None = None
@@ -24,7 +24,7 @@ class UserResponse(BaseModel):
     otp: str | None
     first_name: str
     last_name: str
-    dob: date
+    # dob: date
     email: EmailStr
     phone: str | None
     notes: str | None
