@@ -39,5 +39,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 detail="Invalid or expired token"
             )
 
-        request.state.user = payload["sub"]
+        request.state.user = payload.get("sub")
+        request.state.role = payload.get("role") 
         return await call_next(request)

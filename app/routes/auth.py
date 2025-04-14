@@ -21,9 +21,9 @@ def login(payload: LoginSchema, db: Session = Depends(get_db)):
 
     if not user.is_verified:
         return JSONResponse(status_code=201, content={"success": False, "auth": 1, "message": "User is not verified"})
-
-    access_token = create_access_token({"sub": user.email})
-    refresh_token = create_refresh_token({"sub": user.email})
+    token_data = {"sub": user.email, "role": user.role_id}
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
 
     return {
         "success": True,

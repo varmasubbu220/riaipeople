@@ -5,15 +5,20 @@ from app.schemas.onboarduserschema import OnboardUserCreate, OnboardUserResponse
 from app.utils.database import get_db
 from fastapi.responses import JSONResponse
 import anyio
+from fastapi import Request
 from app.utils.email import send_email
 router = APIRouter(prefix="/onboardusers", tags=["Onboard Users"])
 
 
 # Create a new onboard user
 @router.post("/", response_model=OnboardUserResponse)
-def create_onboard_user(user: OnboardUserCreate, db: Session = Depends(get_db)):
+def create_onboard_user(user: OnboardUserCreate, request: Request, db: Session = Depends(get_db)):
     try:
         # Check if the email already exists
+        if getattr(request.state, "role", None) != 1:
+            
+            return JSONResponse(status_code=201, content={"success": False, "detail": "Only Admin can onboard"})
+
         db_user = db.query(OnboardUser).filter(OnboardUser.email == user.email).first()
         if db_user:
             return JSONResponse(status_code=201, content={"success": False, "detail": "Email already exists"})
