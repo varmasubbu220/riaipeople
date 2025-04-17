@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import users,onboarduser,auth,roles
+from app.routes import users,onboarduser,auth,roles,attendence
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from app.middleware.authmiddleware import AuthMiddleware
@@ -24,6 +24,7 @@ app.include_router(onboarduser.router)
 app.include_router(users.router) 
 app.include_router(auth.router)
 app.include_router(roles.router)
+app.include_router(attendence.router)
 @app.get("/")
 def read_root():
     return {"message": "RIAI People Server is Running 🚀"}
