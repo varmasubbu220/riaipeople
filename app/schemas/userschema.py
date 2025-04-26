@@ -49,3 +49,7 @@ class UserUpdate(BaseModel):
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
+
+class Authschema(BaseModel):
+    username:EmailStr
+    password:str
