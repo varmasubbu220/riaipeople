@@ -11,6 +11,7 @@ class AttendanceCreate(BaseModel):
     status: Optional[str] = "active"
     info: Optional[Dict] = None
     signout_by: Optional[int] = None
+    emp_name:Optional[str]=''
 
 
 class AttendanceOut(AttendanceCreate):

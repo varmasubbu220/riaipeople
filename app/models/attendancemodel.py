@@ -20,7 +20,7 @@ class Attendance(Base):
     info = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=func.current_timestamp())
     updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
-
+    emp_name = Column(String(255), nullable=True, default="")
     # New column: signout_by (foreign key to User.emp_id)
     signout_by = Column(BigInteger, ForeignKey(User.emp_id), nullable=True)
 
