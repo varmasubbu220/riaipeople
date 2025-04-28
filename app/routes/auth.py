@@ -21,7 +21,7 @@ def log(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(
     if not user.is_verified:
         return JSONResponse(status_code=201, content={"success": False, "auth": 1, "message": "User is not verified"})
 
-    token_data = {"sub": user.email, "role": user.role_id}
+    token_data = {"sub": user.email, "role": user.role_id,'emp_id':user.emp_id}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 

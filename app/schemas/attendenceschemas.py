@@ -3,7 +3,6 @@ from typing import Optional, Dict
 from datetime import datetime
 from typing import Any
 class AttendanceCreate(BaseModel):
-    emp_id: int
     shift: Optional[str] = "General"
     checkin_location: str
     device_info: Optional[str] = None

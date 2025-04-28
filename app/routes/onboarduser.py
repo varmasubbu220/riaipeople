@@ -7,16 +7,16 @@ from fastapi.responses import JSONResponse
 import anyio
 from fastapi import Request
 from app.utils.email import send_email
+from fastapi.security import OAuth2PasswordBearer
 router = APIRouter(prefix="/onboardusers", tags=["Onboard Users"])
-
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+from fastapi.encoders import jsonable_encoder
 # Create a new onboard user
 @router.post("/", response_model=OnboardUserResponse)
-def create_onboard_user(user: OnboardUserCreate, request: Request, db: Session = Depends(get_db)):
+def create_onboard_user(request: Request,user: OnboardUserCreate, token: str = Depends(oauth2_scheme),  db: Session = Depends(get_db)):
     try:
         # Check if the email already exists
-        if getattr(request.state, "role", None) != 1:
-            
+        if getattr(request.state, "role", None) not in (1, 2):            
             return JSONResponse(status_code=201, content={"success": False, "detail": "Only Admin can onboard"})
 
         db_user = db.query(OnboardUser).filter(OnboardUser.email == user.email).first()
@@ -97,9 +97,26 @@ def create_onboard_user(user: OnboardUserCreate, request: Request, db: Session =
 
 
 # Get all onboard users
+
 @router.get("/", response_model=list[OnboardUserResponse])
-def get_all_onboard_users(db: Session = Depends(get_db)):
-    return db.query(OnboardUser).all()
+def get_all_onboard_users(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print("Role:", getattr(request.state, "emp_id", None))
+    if getattr(request.state, "role", None) not in (1, 2):
+        return JSONResponse(
+            status_code=201,
+            content={"success": False, "detail": "Only Admin can access data"}
+        )
+
+    users = db.query(OnboardUser).all()
+    users_data = [OnboardUserResponse.from_orm(user).dict() for user in users]
+
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({
+            "success": True,
+            "data": users_data
+        }))
+    
 
 
 # Get a specific onboard user by ID

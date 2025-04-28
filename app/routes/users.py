@@ -197,7 +197,7 @@ def get_all_users(db: Session = Depends(get_db), token: str = Depends(oauth2_sch
 
 
 @router.get("/config", response_model=UserResponse)
-def get_user_config(request: Request, db: Session = Depends(get_db)):
+def get_user_config(request: Request, token: str = Depends(oauth2_scheme),db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")

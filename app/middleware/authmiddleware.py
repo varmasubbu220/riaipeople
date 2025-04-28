@@ -16,8 +16,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Allow public routes by prefix match
         public_routes = [
-            "/auth/login", "/auth/refresh", "/onboardusers/", "/users/", "/docs", "/favicon.ico", "/",
-            "/users/verify", "/data/departments", "/data/roles"
+            "/auth/login", "/auth/refresh", "/users/", "/docs", "/favicon.ico", 
+            "/users/verify",
         ]
         if any(request.url.path.startswith(route) for route in public_routes):
             return await call_next(request)
@@ -38,7 +38,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token"
             )
-
+        print(payload.get(''))
         request.state.user = payload.get("sub")
-        request.state.role = payload.get("role") 
+        request.state.role = payload.get("role")
+        request.state.emp_id=payload.get('emp_id') 
         return await call_next(request)

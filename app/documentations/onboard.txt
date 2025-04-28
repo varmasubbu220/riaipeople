@@ -1,0 +1,27 @@
+**OnboardUser**
+
+- **Create API**:  
+  Creates a new onboard user using the following data:
+  ```python
+  new_user = OnboardUser(
+      emp_name=user.emp_name,
+      role_id=user.role_id,
+      department_id=user.department_id,
+      email=user.email,
+      notes=user.notes,
+  )
+  ```
+- **Access**: Admin and SuperAdmin only
+- **Behavior**:  
+  - On successful creation, the user will be notified by email.  
+  - The user is allowed to sign up.  
+  - Status: No modification required.
+
+---
+
+**Get All Onboard Users**
+
+- **Access**: Admin and SuperAdmin only
+- **Behavior**:  
+  - Retrieves all onboarded users.
+  - Status: No modification required.

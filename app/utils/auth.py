@@ -26,7 +26,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({
         "exp": expire,
         "email": data.get("sub"),   # Email as 'email'
-        "role": data.get("role")    # Include role
+        "role": data.get("role"),    # Include role
+        'emp_id':data.get('emp_id')
     })
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 def create_refresh_token(data: dict):
@@ -35,7 +36,8 @@ def create_refresh_token(data: dict):
     to_encode.update({
         "exp": expire,
         "email": data.get("sub"),   # Email as 'email'
-        "role": data.get("role")    # Include role
+        "role": data.get("role"),    # Include role
+        'emp_id':data.get('emp_id')
     })
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
