@@ -12,7 +12,11 @@ class AttendanceCreate(BaseModel):
     info: Optional[Dict] = None
     signout_by: Optional[int] = None
     emp_name:Optional[str]=''
-
+    
+class AttendanceActionUpdate(BaseModel):
+    emp_id: int
+    is_reset: bool = False
+    is_checkout: bool = False
 
 class AttendanceOut(AttendanceCreate):
     attendance_id: int

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.utils.database import get_db
 from app.models.attendancemodel import Attendance
 from app.models.usermodel import User
-from app.schemas.attendenceschemas import AttendanceCreate, AttendanceOut,SuccessResponse
+from app.schemas.attendenceschemas import AttendanceCreate, AttendanceOut,SuccessResponse,AttendanceActionUpdate
 from datetime import datetime
 from fastapi import Request
 from sqlalchemy import func
@@ -16,7 +16,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 def create_attendance(request: Request, data: AttendanceCreate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     data_dict = data.dict()
     today = datetime.utcnow().date()
-
+    print(getattr(request.state, "role", None))
     emp_id = getattr(request.state, "emp_id", None)
     if not emp_id:
         raise HTTPException(status_code=400, detail="Employee ID not found in request state.")
@@ -63,7 +63,7 @@ def get_attendance( request: Request,token: str = Depends(oauth2_scheme), db: Se
     ).first()
 
     if not attendance:
-       return JSONResponse(status_code=201, content={"success": False,  "message": "not found"})
+       return JSONResponse(status_code=201, content={"success": False,  "message": "Attandance not found"})
 
     # Map the Attendance model to AttendanceOut schema
     attendance_out = AttendanceOut(
@@ -129,4 +129,113 @@ def checkout_attendance(
             "check_out": attendance.check_out,
             "status": attendance.status
         }
+    }
+
+
+@router.put("/update", response_model=SuccessResponse)
+def update_attendance(
+    request: Request,
+    data: AttendanceActionUpdate,  # Note: Now getting emp_id from body
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    emp_id = data.emp_id
+    if not emp_id:
+        raise HTTPException(status_code=400, detail="Employee ID is required in the payload.")
+    if getattr(request.state, "role", None) not in (1, 2):
+        return JSONResponse(
+            status_code=201,
+            content={"success": False, "detail": "Only Admin can access data"}
+        )
+    today = datetime.utcnow().date()
+
+    # Find today's attendance record
+    attendance = db.query(Attendance).filter(
+        Attendance.emp_id == emp_id,
+        func.date(Attendance.check_in) == today
+    ).first()
+
+    if not attendance:
+        return JSONResponse(
+            status_code=201,
+            content={"success": False, "message": "Attendance record not found for today"}
+        )
+
+    # Perform action based on is_reset or is_checkout
+    if data.is_reset:
+        attendance.check_out = None
+        attendance.check_in = datetime.utcnow()
+        attendance.status = "inactive"
+        attendance.signout_by = None
+    elif data.is_checkout:
+        attendance.check_out = datetime.utcnow()
+        attendance.status = "inactive"
+        attendance.signout_by = emp_id
+    else:
+        raise HTTPException(status_code=400, detail="Either is_reset or is_checkout must be true.")
+
+    attendance.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(attendance)
+
+    return {
+        "success": True,
+        "status": 200,
+        "message": "Updated successfully",
+        "data": {
+            "attendance_id": attendance.attendance_id,
+            "action": "reset" if data.is_reset else "checkout"
+        }
+    }
+
+@router.get("/today", response_model=SuccessResponse)
+def get_today_attendance(
+     request: Request,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if getattr(request.state, "role", None) not in (1, 2,4):
+        return JSONResponse(
+            status_code=201,
+            content={"success": False, "detail": "Only Admin can access data"}
+        )
+    today = datetime.utcnow().date()
+
+    # Fetch all records where check_in is today
+    attendances = db.query(Attendance).filter(
+        func.date(Attendance.check_in) == today
+    ).all()
+
+    if not attendances:
+        return JSONResponse(
+            status_code=201,
+            content={"success": False, "message": "No attendance records found for today"}
+        )
+
+    # Prepare list of attendance out
+    attendance_list = [
+        AttendanceOut(
+            attendance_id=record.attendance_id,
+            emp_id=record.emp_id,
+            shift=record.shift,
+            checkin_location=record.checkin_location,
+            device_info=record.device_info,
+            ip_address=record.ip_address,
+            notes=record.notes,
+            status=record.status,
+            info=record.info,
+            signout_by=record.signout_by,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
+            check_in=record.check_in,
+            check_out=record.check_out
+        )
+        for record in attendances
+    ]
+
+    return {
+        "success": True,
+        "status": 200,
+        "data": attendance_list
     }
