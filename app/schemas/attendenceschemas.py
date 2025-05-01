@@ -20,6 +20,7 @@ class AttendanceActionUpdate(BaseModel):
 
 class AttendanceOut(AttendanceCreate):
     attendance_id: int
+    emp_id:int
     created_at: datetime
     updated_at: datetime
     check_in: Optional[datetime]

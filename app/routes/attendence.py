@@ -164,7 +164,7 @@ def update_attendance(
     # Perform action based on is_reset or is_checkout
     if data.is_reset:
         attendance.check_out = None
-        attendance.check_in = datetime.utcnow()
+        attendance.check_in = None
         attendance.status = "inactive"
         attendance.signout_by = None
     elif data.is_checkout:
@@ -212,7 +212,7 @@ def get_today_attendance(
             status_code=201,
             content={"success": False, "message": "No attendance records found for today"}
         )
-
+    
     # Prepare list of attendance out
     attendance_list = [
         AttendanceOut(
