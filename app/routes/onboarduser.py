@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.models.onboardusermodel import OnboardUser
-from app.schemas.onboarduserschema import OnboardUserCreate, OnboardUserResponse, OnboardUserUpdate
+from app.schemas.onboarduserschema import OnboardUserCreate, OnboardUserResponse, OnboardUserUpdate,RestoreUserRequest
 from app.utils.database import get_db
 from fastapi.responses import JSONResponse
 import anyio
@@ -153,3 +153,14 @@ def delete_onboard_user(emp_id: int, db: Session = Depends(get_db)):
     user.is_deleted = True  # Soft delete by setting is_deleted to True
     db.commit()
     return {"message": "Onboard user deleted successfully"}
+
+@router.post("/restore")
+def restore_onboard_user(payload: RestoreUserRequest, db: Session = Depends(get_db)):
+    print('ssssss',payload.emp_id)
+    user = db.query(OnboardUser).filter(OnboardUser.emp_id == payload.emp_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Onboard user not found")
+
+    user.is_deleted = False
+    db.commit()
+    return {"message": "Onboard user restored successfully"}

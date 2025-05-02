@@ -218,6 +218,7 @@ def get_today_attendance(
         AttendanceOut(
             attendance_id=record.attendance_id,
             emp_id=record.emp_id,
+            emp_name=record.emp_name,
             shift=record.shift,
             checkin_location=record.checkin_location,
             device_info=record.device_info,

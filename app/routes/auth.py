@@ -74,7 +74,18 @@ def validate_token(token: str = Depends(oauth2_scheme), db: Session = Depends(ge
 def refresh_token(refresh_token: str):
     payload = verify_token(refresh_token)
     if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
 
     new_access_token = create_access_token({"sub": payload["sub"]})
-    return {"access_token": new_access_token, "token_type": "bearer"}
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "success": True,
+            "access_token": new_access_token,
+            "token_type": "bearer"
+        }
+    )

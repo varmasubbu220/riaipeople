@@ -34,3 +34,6 @@ class OnboardUserUpdate(BaseModel):
     notes: Optional[str] = None
     is_deleted: Optional[bool] = None
     is_allowed: Optional[bool] = None
+
+class RestoreUserRequest(BaseModel):
+    emp_id: int
